@@ -1,0 +1,6 @@
+streamlit
+matplotlib
+seaborn
+pandas
+faiss-cpu
+ollama
