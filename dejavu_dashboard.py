@@ -1,4 +1,4 @@
-import streamlit as st
+import streamlit as st 
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -8,6 +8,7 @@ import ollama
 import os
 import datetime
 
+import networkx as nx 
 # --- FAISS + LLM Utilities ---
 def get_top_k_similar_users(query_vector, user_ids, faiss_index, k=5):
     D, I = faiss_index.search(np.array([query_vector]), k)
@@ -31,7 +32,7 @@ Top Similar Users (by device/IP/return behavior):
     prompt += "\n\nAssess the likelihood of fraud. Explain why based on device/IP overlaps, return timing, and past similar users."
     return prompt
 
-def get_llm_fraud_risk(prompt, model="llama3"):
+def get_llm_fraud_risk(prompt, model="llama3:latest"):
     try:
         response = ollama.chat(
             model=model,
@@ -50,8 +51,8 @@ def log_admin_action(user_id, action):
     log_entry.to_csv("admin_actions_log.csv", mode='a', header=not os.path.exists("admin_actions_log.csv"), index=False)
 
 # --- Streamlit App ---
-st.set_page_config(layout="wide", page_title="DejaVuAI: Fraud Trust Score Dashboard")
-st.title("DejaVuAI - Return Fraud Detection Admin Dashboard")
+st.set_page_config(layout="wide",page_title= "Return Fraud Detection Admin Dashboard")
+st.title("Return Fraud Detection Admin Dashboard")
 
 @st.cache_data
 def load_data():
@@ -79,24 +80,6 @@ def build_faiss_and_embeddings(df, dim=128):
 
 st.session_state["user_embeddings"], st.session_state["faiss_index"] = build_faiss_and_embeddings(df)
 
-# --- Sampling for Display ---
-def sample_trust_tiers(df, seed=42, sample_size=2):
-    np.random.seed(seed)
-    sampled_df = (
-        df.groupby("trust_tier", group_keys=False)
-        .apply(lambda x: x.sample(min(len(x), sample_size)))
-        .reset_index(drop=True)
-    )
-    return sampled_df
-
-if "sample_seed" not in st.session_state:
-    st.session_state["sample_seed"] = 42
-
-if st.button("Refresh Sample"):
-    st.session_state["sample_seed"] = np.random.randint(0, 1_000_000)
-
-sample_df = sample_trust_tiers(df, seed=st.session_state["sample_seed"])
-
 # --- Sidebar ---
 with st.sidebar:
     st.header("Filter Options")
@@ -105,25 +88,67 @@ with st.sidebar:
     enable_llm = st.checkbox("Enable LLM Fraud Assessment")
     ollama_model = st.selectbox("Ollama Model", ["llama3", "mistral", "phi3"])
 
-# --- Metrics ---
-col1, col2, col3 = st.columns(3)
+# --- Trust Tier Metrics ---
+trusted_count = df[df["trust_tier"] == "Trusted"].shape[0]
+watchlist_count = df[df["trust_tier"] == "Watchlist"].shape[0]
+banned_count = df[df["trust_tier"] == "Banned"].shape[0]
+high_risk_count = df[df["trust_tier"] == "High Risk"].shape[0]
+
+col1, col2, col3, col4 = st.columns(4)
 with col1:
-    st.metric("Trusted", df[df["trust_tier"] == "Trusted"].shape[0])
+    st.markdown(f"""<div style="background-color:#222; padding:15px; border-radius:10px; text-align:center;">
+        <h4 style="color:white;">Trusted</h4>
+        <p style="font-size:32px; color:#00FFAA;">{trusted_count}</p>
+    </div>""", unsafe_allow_html=True)
 with col2:
-    st.metric("Watchlist", df[df["trust_tier"] == "Watchlist"].shape[0])
+    st.markdown(f"""<div style="background-color:#222; padding:15px; border-radius:10px; text-align:center;">
+        <h4 style="color:white;">Watchlist</h4>
+        <p style="font-size:32px; color:#FFD700;">{watchlist_count}</p>
+    </div>""", unsafe_allow_html=True)
 with col3:
-    st.metric("Banned", df[df["trust_tier"] == "Banned"].shape[0])
+    st.markdown(f"""<div style="background-color:#222; padding:15px; border-radius:10px; text-align:center;">
+        <h4 style="color:white;">Banned</h4>
+        <p style="font-size:32px; color:#FF4444;">{banned_count}</p>
+    </div>""", unsafe_allow_html=True)
+with col4:
+    st.markdown(f"""<div style="background-color:#222; padding:15px; border-radius:10px; text-align:center;">
+        <h4 style="color:white;">High Risk</h4>
+        <p style="font-size:32px; color:#FF8C00;">{high_risk_count}</p>
+    </div>""", unsafe_allow_html=True)
 
-# --- Sample Preview ---
-st.markdown("### Sampled User Trust Scores")
-st.dataframe(sample_df.style.background_gradient(cmap="RdYlGn_r", subset=["final_trust_score"]))
 
-# --- Optional Filtering ---
+# --- Filtering ---
 display_df = df.copy()
 if selected_tier != "All":
     display_df = display_df[display_df["trust_tier"] == selected_tier]
 if user_search:
     display_df = display_df[display_df["user_id"].str.contains(user_search, case=False)]
+
+def highlight_tier(row):
+    color = ""
+    if row["trust_tier"] == "Trusted":
+        color = "#4abc11"   # Green
+    elif row["trust_tier"] == "Watchlist":
+        color = "#f5ee28"   # Yellow
+    elif row["trust_tier"] == "Banned":
+        color = "#f10e0e"   # Red
+    elif row["trust_tier"] == "High Risk":
+        color = "#ff6a00"   # Orange
+
+    return [f"background-color: {color}" if col == "trust_tier" else "" for col in row.index]
+
+
+# --- Trust Score Table with Gradient on final_trust_score only ---
+st.markdown("### All Users Trust Score Table")
+st.dataframe(
+    display_df.style
+        .background_gradient(
+            cmap="RdYlGn",
+            subset=["final_trust_score"]
+        )
+        .format({"final_trust_score": "{:.6f}"})
+)
+
 
 # --- User Inspection ---
 st.markdown("---")
@@ -132,11 +157,11 @@ if not display_df.empty:
     selected_user = st.selectbox("Select User ID to Inspect", display_df["user_id"].unique())
     user_row = df[df["user_id"] == selected_user].iloc[0]
 
-    st.markdown(f"**User ID**: `{user_row['user_id']}`")
-    st.markdown(f"**Final Trust Score**: `{user_row['final_trust_score']:.4f}`")
-    st.markdown(f"**Classifier Score**: `{user_row['fraud_model_score']:.4f}`")
-    st.markdown(f"**Graph Similarity Score**: `{user_row['graph_similarity_score']:.4f}`")
-    st.markdown(f"**Trust Tier**: `{user_row['trust_tier']}`")
+    st.markdown(f"**User ID**: {user_row['user_id']}")
+    st.markdown(f"**Final Trust Score**: {user_row['final_trust_score']:.4f}")
+    st.markdown(f"**Classifier Score**: {user_row['fraud_model_score']:.4f}")
+    st.markdown(f"**Graph Similarity Score**: {user_row['graph_similarity_score']:.4f}")
+    st.markdown(f"**Trust Tier**: {user_row['trust_tier']}")
 
     st.markdown("#### Admin Actions (Simulated)")
     if st.button("Flag for Manual Review"):
@@ -164,9 +189,30 @@ if not display_df.empty:
         else:
             st.warning("No embedding found for this user.")
 
-# --- Trust Score Distribution ---
-st.markdown("---")
-st.markdown("### Trust Score Distribution by Tier")
-fig, ax = plt.subplots()
-sns.histplot(df, x="final_trust_score", hue="trust_tier", multiple="stack", palette="Set2", ax=ax)
-st.pyplot(fig)
+# --- Fraud Ring Visualization ---
+st.markdown("### \U0001F517 Fraud Ring Similarity Graph")
+fraud_ring_data = [
+    {"user_id": "597", "cos_sim": 0.5265},
+    {"user_id": "438", "cos_sim": 0.5197},
+    {"user_id": "572", "cos_sim": 0.5176},
+    {"user_id": "975", "cos_sim": 0.5060},
+    {"user_id": "515", "cos_sim": 0.4941},
+]
+
+G = nx.Graph()
+G.add_node("U_Query", type="query")
+
+for node in fraud_ring_data:
+    uid = f"U_{node['user_id']}"
+    G.add_node(uid, type="fraud", sim=node["cos_sim"])
+    G.add_edge("U_Query", uid, weight=node["cos_sim"])
+
+color_map = ["gold" if n == "U_Query" else "red" for n in G.nodes()]
+pos = nx.spring_layout(G, seed=42)
+plt.figure(figsize=(8, 6))
+nx.draw(G, pos, with_labels=True, node_color=color_map, node_size=800, font_weight='bold', edge_color='gray')
+edge_labels = {(u, v): f"{d['weight']:.2f}" for u, v, d in G.edges(data=True)}
+nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_color='black', font_size=9)
+plt.title("Fraud Ring Visualization (Cosine Similarity)")
+plt.axis("off")
+st.pyplot(plt)
