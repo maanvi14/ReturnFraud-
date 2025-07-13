@@ -4,3 +4,4 @@ seaborn
 pandas
 faiss-cpu
 ollama
+networkx
