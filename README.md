@@ -1,6 +1,10 @@
 RETURN FRAUD DETECTION VIA GRAPH EMBEDDINGS AND FAISS(COSINE SIMILARITY) 
 
-This project is an advanced fraud detection pipeline focused on identifying return frauds using tabular data, graph embeddings, and hybrid scoring. It is deployed via a Streamlit dashboard and leverages cutting-edge tools like FAISS, Node2Vec, XGBoost, and LLM-based explanations using Ollama for Fraud Risk Assesment .
+• Developed ML pipeline with XGBoost, achieving 98.7% F1-score on test data.
+• Leveraged Node2Vec and FAISS Cosine Similarity for fraud ring detection via graph embeddings and
+  similarity search.
+• Integrated LLaMA3 via Ollama for explainable AI, enabling 5-tier trust classification of predictions.
+
 
 
 ---
