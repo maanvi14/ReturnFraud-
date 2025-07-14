@@ -4,7 +4,7 @@ This project is an advanced fraud detection pipeline focused on identifying retu
 
 
 ---
-<img width="2880" height="1800" alt="image" src= "https://github.com/user-attachments/assets/d05221c8-bdc3-4fa0-89ce-b9d419f078b7"
+<img width="2880" height="1800" alt="image" src= "https://github.com/user-attachments/assets/d05221c8-bdc3-4fa0-89ce-b9d419f078b7" />
 
 ##  Tech Stack
 
