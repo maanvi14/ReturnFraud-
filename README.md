@@ -125,4 +125,4 @@ Explore fraud scores, inspect users, visualize fraud rings, and test LLM explana
 1. Upload data → Preprocessing
 2. Graph embedding → Similarity scoring
 3. Train model → Score generation
-4. Dashboard display → LLM optional
+4. Dashboard display → LLM Fraud Assesment
