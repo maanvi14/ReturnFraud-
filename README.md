@@ -65,7 +65,7 @@ Return-Fraud-Detection/
 
 ```bash
 git clone <repository-url>
-cd Return-Fraud-Detection
+cd ReturnFraud-Detection-Via-Graph-Embeddings
 ```
 
 ### Step 2: Install Dependencies
