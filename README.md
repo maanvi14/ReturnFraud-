@@ -133,7 +133,7 @@ Install Ollama: [https://ollama.com/](https://ollama.com/)
 Start an Ollama model:
 
 ```bash
-ollama run mistral  # or phi3, llama2
+ollama run llama3 # or phi3, mistral
 ```
 
 Configure Streamlit app to use `llm_assistant/generate_explanation.py`
