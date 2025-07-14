@@ -4,7 +4,7 @@ This project is an advanced fraud detection pipeline focused on identifying retu
 
 ---
 
-## 🧠 Tech Stack
+##  Tech Stack
 
 *Data & Processing*
 Python, Pandas, NumPy, scikit-learn
@@ -22,7 +22,7 @@ FAISS (Facebook AI Similarity Search)
 Streamlit
 
 *LLM Integration*
-Ollama (LLaMA, Mistral, Phi3) - for risk explanation 
+Ollama (LLaMA, Mistral, Phi3) - for LLM's based fraud Risk Assesment 
 
 *Deployment*
 Streamlit Cloud ([App Link](https://returnfraud.streamlit.app))
